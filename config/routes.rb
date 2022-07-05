@@ -1,6 +1,7 @@
 Rails.application.routes.draw do
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+  post 'multipart_upload/init', to: 'multipart_upload#init'
+  post 'multipart_upload/upload_part_url', to: 'multipart_upload#upload_part_url'
+  post 'multipart_upload/finalize', to: 'multipart_upload#finalize'
 
-  # Defines the root path route ("/")
-  # root "articles#index"
+  root "application#index"
 end
