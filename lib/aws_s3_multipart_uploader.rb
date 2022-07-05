@@ -13,7 +13,7 @@ class AwsS3MultipartUploader
     @bucket = @resource.bucket(BUCKET_NAME)
   end
 
-  def initialize_multipart_upload(identifier, filename)
+  def initialize_upload(identifier, filename)
     key = multipart_upload_filename(identifier, filename)
     obj = @bucket.object(key)
 
@@ -56,7 +56,7 @@ class AwsS3MultipartUploader
     }
   end
 
-  def upload_part_url(upload_id, key, part_number)
+  def prepare_upload_part(upload_id, key, part_number)
     obj = @bucket.object(key)
     presigned_url = obj.presigned_url(:upload_part, part_number: part_number, upload_id: upload_id)
     {
@@ -64,7 +64,7 @@ class AwsS3MultipartUploader
     }
   end
 
-  def complete_multipart_upload(upload_id, key)
+  def finalize_upload(upload_id, key)
     obj = @bucket.object(key)
 
     params = {

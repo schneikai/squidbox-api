@@ -1,17 +1,17 @@
 class MultipartUploadController < ApplicationController
   def init
-    data = multipart_uploader.initialize_multipart_upload(params.fetch(:identifier), params.fetch(:filename))
+    data = multipart_uploader.initialize_upload(params.fetch(:identifier), params.fetch(:filename))
     render json: data
   end
 
-  def upload_part_url
-    data = multipart_uploader.upload_part_url(params.fetch(:upload_id), params.fetch(:key),
+  def prepare_upload_part
+    data = multipart_uploader.prepare_upload_part(params.fetch(:upload_id), params.fetch(:key),
                                            params.fetch(:part_number))
     render json: data
   end
 
   def finalize
-    data = multipart_uploader.complete_multipart_upload(params.fetch(:upload_id), params.fetch(:key))
+    data = multipart_uploader.finalize_upload(params.fetch(:upload_id), params.fetch(:key))
     render json: data
   end
 
