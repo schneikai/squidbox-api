@@ -24,6 +24,12 @@ module SquidboxApi
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
+    # Autoload code from lib directory
     config.autoload_paths << Rails.root.join("lib")
+
+    # Change incomming params from camelCase to snake_case 
+    config.middleware.use OliveBranch::Middleware,
+                          inflection: 'camel',
+                          content_type_check: -> (content_type) { true }
   end
 end
