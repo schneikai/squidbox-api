@@ -1,4 +1,6 @@
 class MultipartUploadController < ApplicationController
+  # TODO: Just send a filename here that we can use as the identifier/key
+  # identifier and filename is confusing
   def init
     data = multipart_uploader.initialize_upload(params.fetch(:identifier), params.fetch(:filename))
     render json: data
@@ -18,6 +20,6 @@ class MultipartUploadController < ApplicationController
   private
 
   def multipart_uploader
-    @multipart_uploader ||= AwsS3MultipartUploader.new
+    @multipart_uploader ||= AwsS3::MultipartUploader.new
   end
 end
