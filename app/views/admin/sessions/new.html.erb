@@ -1,0 +1,17 @@
+<h2>Admin Login</h2>
+
+<%= form_with(url: admin_sessions_path, method: :post) do |form| %>
+  <div>
+    <%= form.label :email %><br>
+    <%= form.email_field :email, autofocus: true, value: Rails.env.development? ? "admin@example.com" : "" %>
+  </div>
+
+  <div>
+    <%= form.label :password %><br>
+    <%= form.password_field :password, value: Rails.env.development? ? "password" : "" %>
+  </div>
+
+  <div>
+    <%= form.submit "Log in" %>
+  </div>
+<% end %>
