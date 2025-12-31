@@ -31,7 +31,8 @@ Rails.application.routes.draw do
       # request body and so we are not limited by the URL length.
       post 'asset_files/download_urls', to: 'asset_files#download_urls'
       post 'asset_files/upload_url', to: 'asset_files#upload_url'
-      put 'asset_files/upload_proxy/:file_key', to: 'asset_files#upload_proxy'
+      # Capture full filename with extension - constraints allow dots in file_key
+      put 'asset_files/upload_proxy/*file_key', to: 'asset_files#upload_proxy', format: false
       post 'asset_files/file_info', to: 'asset_files#file_info'
       post 'asset_files/delete_file', to: 'asset_files#delete_file'
     end

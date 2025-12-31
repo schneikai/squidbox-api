@@ -48,7 +48,8 @@ class Storage
   # @param key [String] The S3 object key
   # @param io_stream [IO] The IO stream to read from
   # @param chunk_size [Integer] Size of each part in bytes (default 10MB)
-  def multipart_upload(key, io_stream, chunk_size: 10 * 1024 * 1024)
+  # @param progress_callback [Proc] Optional callback for progress updates
+  def multipart_upload(key, io_stream, chunk_size: 10 * 1024 * 1024, &progress_callback)
     # Initialize multipart upload
     multipart_upload = s3_client.create_multipart_upload(
       bucket: @bucket_name,
@@ -58,10 +59,18 @@ class Storage
 
     parts = []
     part_number = 1
+    total_bytes = 0
+    
+    # Estimate total parts
+    total_size = io_stream.size rescue nil
+    estimated_parts = total_size ? (total_size.to_f / chunk_size).ceil : nil
 
     begin
       # Read and upload in chunks
       while (chunk = io_stream.read(chunk_size))
+        chunk_size_bytes = chunk.bytesize
+        total_bytes += chunk_size_bytes
+        
         response = s3_client.upload_part(
           bucket: @bucket_name,
           key: key,
@@ -74,6 +83,11 @@ class Storage
           etag: response.etag,
           part_number: part_number
         }
+        
+        # Call progress callback if provided
+        if progress_callback && estimated_parts
+          progress_callback.call(part_number, estimated_parts, total_bytes)
+        end
 
         part_number += 1
       end

@@ -8,6 +8,14 @@ rails db:drop db:create db:migrate db:seed
 rails s
 ```
 
+## Large File Uploads (>4GB)
+
+Files ≥4GB are uploaded via API proxy with background S3 multipart upload. Upload progress tracking requires `Rails.cache`:
+
+- **Production**: Uses `:memory_store` by default (progress tracking works)
+- **Development**: Uses `:null_store` by default (no progress tracking, shows "Validating upload..." instead)
+  - To see progress in development, change `config.cache_store` to `:memory_store` in `config/environments/development.rb`
+
 ## Credentials and Master Key
 
 Master Key is in my notes. Ask me for it.
