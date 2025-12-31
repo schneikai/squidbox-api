@@ -44,6 +44,60 @@ class Storage
     s3_client.delete_object(bucket: @bucket_name, key:)
   end
 
+  # Performs multipart upload for large files
+  # @param key [String] The S3 object key
+  # @param io_stream [IO] The IO stream to read from
+  # @param chunk_size [Integer] Size of each part in bytes (default 10MB)
+  def multipart_upload(key, io_stream, chunk_size: 10 * 1024 * 1024)
+    # Initialize multipart upload
+    multipart_upload = s3_client.create_multipart_upload(
+      bucket: @bucket_name,
+      key: key
+    )
+    upload_id = multipart_upload.upload_id
+
+    parts = []
+    part_number = 1
+
+    begin
+      # Read and upload in chunks
+      while (chunk = io_stream.read(chunk_size))
+        response = s3_client.upload_part(
+          bucket: @bucket_name,
+          key: key,
+          part_number: part_number,
+          upload_id: upload_id,
+          body: chunk
+        )
+
+        parts << {
+          etag: response.etag,
+          part_number: part_number
+        }
+
+        part_number += 1
+      end
+
+      # Complete the multipart upload
+      s3_client.complete_multipart_upload(
+        bucket: @bucket_name,
+        key: key,
+        upload_id: upload_id,
+        multipart_upload: { parts: parts }
+      )
+
+      { success: true, parts_count: parts.length }
+    rescue StandardError => e
+      # Abort the multipart upload on error
+      s3_client.abort_multipart_upload(
+        bucket: @bucket_name,
+        key: key,
+        upload_id: upload_id
+      )
+      raise e
+    end
+  end
+
   private
 
   def s3_client

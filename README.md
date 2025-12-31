@@ -20,13 +20,13 @@ EDITOR="code --wait" bin/rails credentials:edit
 
 ## Deploy to DigitalOcean App Platform
 
-* Go to DigitalOcean and create a new App
-* Select the GitHub repo and the branch to deploy (usually main)
-* Add a PostgeSQL database
-* Add the Rails RAILS_MASTER_KEY environment variable with the content from config/master.key
-* Deploy and wait for the build to finish (everytime you push to main, it will deploy automatically)
+- Go to DigitalOcean and create a new App
+- Select the GitHub repo and the branch to deploy (usually main)
+- Add a PostgeSQL database
+- Add the Rails RAILS_MASTER_KEY environment variable with the content from config/master.key
+- Deploy and wait for the build to finish (everytime you push to main, it will deploy automatically)
 
-If you start the app for the first time you need to create a user. Go to the app in DigitalOcean 
+If you start the app for the first time you need to create a user. Go to the app in DigitalOcean
 and click on the console. Then run:
 
 ```bash
@@ -36,5 +36,3 @@ AdminUser.create(email: 'admin@example.com', password: password, password_confir
 AdminUser.create(email: 'schneikai@gmail.com', password: password, password_confirmation: password)
 puts "User created with password: #{password}"
 ```
-
-
