@@ -30,9 +30,8 @@ Rails.application.routes.draw do
       # Using post here since we're sending a list of file keys in the
       # request body and so we are not limited by the URL length.
       post 'asset_files/download_urls', to: 'asset_files#download_urls'
-      post 'asset_files/upload_url', to: 'asset_files#upload_url'
-      # Capture full filename with extension - constraints allow dots in file_key
-      put 'asset_files/upload_proxy/*file_key', to: 'asset_files#upload_proxy', format: false
+      # Capture full filename with extension - format: false allows dots in file_key
+      put 'asset_files/upload/*file_key', to: 'asset_files#upload', format: false
       post 'asset_files/file_info', to: 'asset_files#file_info'
       post 'asset_files/delete_file', to: 'asset_files#delete_file'
     end

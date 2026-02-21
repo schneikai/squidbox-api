@@ -18,19 +18,19 @@ To edit credentials:
 EDITOR="code --wait" bin/rails credentials:edit
 ```
 
-## Large File Uploads (>4GB)
+## File Uploads
 
-Files ≥4GB are currently skipped during sync with a "Skipped large file upload" error. This is a known limitation — see the proxy upload section below for the planned fix.
+All uploads go through the API (`PUT /api/v1/asset_files/upload/:file_key`). The server streams the file to a temp file and uploads to S3 synchronously — responding only after S3 confirms completion.
 
-### Background
+- **Small files** (< 100MB): single `put_object` to S3
+- **Large files** (≥ 100MB): S3 multipart upload (10MB chunks)
 
-- **S3 limit**: Single-PUT uploads are limited to 5GB (hard S3 limit), and reliable uploads require chunked/multipart for large files
-- **Expo bug**: Expo's chunked file reading crashes on files >2GB due to a C++ integer overflow (long-standing unresolved bug)
-- **Proxy upload**: The API has a proxy upload endpoint (`upload_proxy`) where the app pushes the file to Rails, which then does S3 multipart upload in a background thread. This works but requires a deployment that allows long-running HTTP connections (see Droplet deployment below)
+The Caddy reverse proxy is configured with a 4h timeout to support very large file uploads. No background threads or progress polling are needed.
 
-Upload progress tracking requires `Rails.cache`:
-- **Production**: Uses `:memory_store` by default (progress tracking works)
-- **Development**: Uses `:null_store` by default (no progress tracking, shows "Validating upload..." instead)
+### Notes on Expo limitations
+
+- **Checksum validation**: Expo crashes when reading MD5 of files > 2GB. For those files validation falls back to file size comparison.
+- **S3 multipart ETags**: Multipart uploads produce ETags in `hash-partcount` format (e.g. `abc123-5`), which cannot be used for checksum validation — file size is used instead.
 
 ## Deploy to DigitalOcean Droplet
 
