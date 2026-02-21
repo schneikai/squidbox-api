@@ -14,6 +14,6 @@ if Rails.env.development?
   AdminUser.create(email: 'admin@example.com', password: 'password', password_confirmation: 'password')
   User.create(email: 'user@example.com', password: 'password', password_confirmation: 'password',
               storage_bucket: Rails.application.credentials[:example_user_storage_bucket])
-  User.create(email: 'schneikai@gmail.com', password: 'password', password_confirmation: 'password',
+  User.create(email: 'YOUR_EMAIL', password: 'password', password_confirmation: 'password',
               storage_bucket: Rails.application.credentials[:schneikai_user_storage_bucket])
 end

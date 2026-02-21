@@ -52,6 +52,10 @@ The app is deployed as a Docker container on a DigitalOcean Droplet. This allows
 # SSH into the Droplet
 ssh root@YOUR_DROPLET_IP
 
+# Enable automatic security patches (set and forget)
+apt install -y unattended-upgrades
+dpkg-reconfigure -plow unattended-upgrades
+
 # Install Docker
 curl -fsSL https://get.docker.com | sh
 
