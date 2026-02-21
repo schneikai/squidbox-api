@@ -36,79 +36,46 @@ class Storage
     s3_client.delete_object(bucket: @bucket_name, key: from_key)
   end
 
-  def write_file(key, data)
-    s3_client.put_object(bucket: @bucket_name, key:, body: data)
+  def write_file(key, stream, content_length:)
+    s3_client.put_object(bucket: @bucket_name, key:, body: stream, content_length:)
   end
 
   def delete_file(key)
     s3_client.delete_object(bucket: @bucket_name, key:)
   end
 
-  # Performs multipart upload for large files
+  # Streams a large file to S3 using multipart upload (100MB chunks).
+  # Reads directly from the IO stream without buffering to disk.
   # @param key [String] The S3 object key
-  # @param io_stream [IO] The IO stream to read from
-  # @param chunk_size [Integer] Size of each part in bytes (default 10MB)
-  # @param progress_callback [Proc] Optional callback for progress updates
-  def multipart_upload(key, io_stream, chunk_size: 10 * 1024 * 1024, &progress_callback)
-    # Initialize multipart upload
-    multipart_upload = s3_client.create_multipart_upload(
-      bucket: @bucket_name,
-      key: key
-    )
-    upload_id = multipart_upload.upload_id
-
+  # @param stream [IO] The IO stream to read from (e.g. request.body_stream)
+  # @param chunk_size [Integer] Size of each part in bytes (default 100MB)
+  def multipart_upload(key, stream, chunk_size: 100 * 1024 * 1024)
+    upload_id = s3_client.create_multipart_upload(bucket: @bucket_name, key:).upload_id
     parts = []
     part_number = 1
-    total_bytes = 0
-    
-    # Estimate total parts
-    total_size = io_stream.size rescue nil
-    estimated_parts = total_size ? (total_size.to_f / chunk_size).ceil : nil
 
     begin
-      # Read and upload in chunks
-      while (chunk = io_stream.read(chunk_size))
-        chunk_size_bytes = chunk.bytesize
-        total_bytes += chunk_size_bytes
-        
+      while (chunk = stream.read(chunk_size))
         response = s3_client.upload_part(
           bucket: @bucket_name,
-          key: key,
-          part_number: part_number,
-          upload_id: upload_id,
+          key:,
+          part_number:,
+          upload_id:,
           body: chunk
         )
-
-        parts << {
-          etag: response.etag,
-          part_number: part_number
-        }
-        
-        # Call progress callback if provided
-        if progress_callback && estimated_parts
-          progress_callback.call(part_number, estimated_parts, total_bytes)
-        end
-
+        parts << { etag: response.etag, part_number: }
         part_number += 1
       end
 
-      # Complete the multipart upload
       s3_client.complete_multipart_upload(
         bucket: @bucket_name,
-        key: key,
-        upload_id: upload_id,
-        multipart_upload: { parts: parts }
+        key:,
+        upload_id:,
+        multipart_upload: { parts: }
       )
-
-      { success: true, parts_count: parts.length }
     rescue StandardError => e
-      # Abort the multipart upload on error
-      s3_client.abort_multipart_upload(
-        bucket: @bucket_name,
-        key: key,
-        upload_id: upload_id
-      )
-      raise e
+      s3_client.abort_multipart_upload(bucket: @bucket_name, key:, upload_id:)
+      raise
     end
   end
 

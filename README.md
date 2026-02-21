@@ -20,23 +20,21 @@ EDITOR="code --wait" bin/rails credentials:edit
 
 ## File Uploads
 
-All uploads go through the API (`PUT /api/v1/asset_files/upload/:file_key`). The server streams the file to a temp file and uploads to S3 synchronously — responding only after S3 confirms completion.
+All uploads go through the API (`PUT /api/v1/asset_files/upload/:file_key`). The request body is streamed directly to S3 — no temp file is written to disk. The API responds only after S3 confirms completion.
 
-- **Small files** (< 100MB): single `put_object` to S3
-- **Large files** (≥ 100MB): S3 multipart upload (10MB chunks)
+- **Small files** (< 200MB): single `put_object` to S3
+- **Large files** (≥ 200MB): S3 multipart upload in 100MB chunks
+
+Peak memory usage is ~100MB (one chunk at a time). Disk usage is minimal — Rack/Puma may buffer the request body internally for very large uploads, but no second copy is made.
 
 The Caddy reverse proxy is configured with a 4h timeout to support very large file uploads. No background threads or progress polling are needed.
-
-### Notes on Expo limitations
-
-- **Checksum validation**: Expo crashes when reading MD5 of files > 2GB. For those files validation falls back to file size comparison.
-- **S3 multipart ETags**: Multipart uploads produce ETags in `hash-partcount` format (e.g. `abc123-5`), which cannot be used for checksum validation — file size is used instead.
 
 ## Deploy to DigitalOcean Droplet
 
 The app is deployed as a Docker container on a DigitalOcean Droplet. This allows us to configure long HTTP timeouts (4h) needed for large file proxy uploads, which is not possible on App Platform.
 
 **Credentials needed** (stored in personal notes):
+
 - Droplet IP and SSH password
 - `RAILS_MASTER_KEY` (also in `config/master.key`)
 - `DATABASE_URL` (VPC connection string from DO Managed Database)
@@ -69,14 +67,21 @@ git clone https://github.com/schneikai/squidbox-api.git
 cd squidbox-api
 docker build -t squidbox-api .
 
+# Store credentials in an env file (do this once — values come from personal notes)
+mkdir -p /etc/squidbox
+cat > /etc/squidbox/env <<EOF
+RAILS_ENV=production
+RAILS_MASTER_KEY=YOUR_RAILS_MASTER_KEY
+DATABASE_URL=YOUR_VPC_DATABASE_URL
+EOF
+chmod 600 /etc/squidbox/env
+
 # Run the container
 docker run -d \
   --name squidbox-api \
   --restart unless-stopped \
   -p 3000:3000 \
-  -e RAILS_ENV=production \
-  -e RAILS_MASTER_KEY=YOUR_RAILS_MASTER_KEY \
-  -e DATABASE_URL="YOUR_VPC_DATABASE_URL" \
+  --env-file /etc/squidbox/env \
   squidbox-api
 
 # Configure Caddy for SSL
@@ -107,6 +112,7 @@ curl https://YOUR_DOMAIN/up
 ### Database Access
 
 The Droplet must be in the **Trusted Sources** list of the DO Managed Database:
+
 - Go to DO Dashboard → Databases → your database → Network Access tab
 - Add the Droplet as a trusted source
 
@@ -124,10 +130,28 @@ docker run -d \
   --name squidbox-api \
   --restart unless-stopped \
   -p 3000:3000 \
-  -e RAILS_ENV=production \
-  -e RAILS_MASTER_KEY=YOUR_RAILS_MASTER_KEY \
-  -e DATABASE_URL="YOUR_VPC_DATABASE_URL" \
+  --env-file /etc/squidbox/env \
   squidbox-api
+```
+
+### Debugging
+
+```bash
+# View recent logs
+docker logs squidbox-api --tail 50
+
+# Follow logs in real time
+docker logs squidbox-api -f
+
+# Check if the container is running
+docker ps -a
+
+# Open a Rails console inside the container
+docker exec -it squidbox-api ./bin/rails c
+
+# Check the health endpoint
+curl https://YOUR_DOMAIN/up
+# Should return a green HTML page (200 OK)
 ```
 
 ### Creating an Admin User (first time only)
