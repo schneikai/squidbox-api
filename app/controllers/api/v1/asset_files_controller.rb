@@ -12,7 +12,7 @@ class Api::V1::AssetFilesController < Api::V1::ApiController
   # POST /api/v1/asset_files/download_urls
   def download_urls
     response_data = file_keys.map do |key|
-      [key, storage.generate_presigned_url(key)]
+      [key, storage.generate_presigned_url(key, expires_in: expires_in)]
     end
     render json: response_data
   end
@@ -48,6 +48,11 @@ class Api::V1::AssetFilesController < Api::V1::ApiController
 
   def file_keys
     params.require(:file_keys)
+  end
+
+  def expires_in
+    requested = params[:expires_in].to_i
+    requested.positive? ? [requested, 1.week.to_i].min : 1.hour.to_i
   end
 
   def storage
