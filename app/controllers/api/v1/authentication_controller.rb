@@ -3,7 +3,7 @@
 class Api::V1::AuthenticationController < Api::V1::ApiController
   skip_before_action :authenticate_request, only: %i[login refresh]
 
-  TOKEN_EXPIRATION = 2.hours
+  TOKEN_EXPIRATION = 24.hours
   REFRESH_TOKEN_EXPIRATION = 1.year
 
   # POST /api/v1/auth/login

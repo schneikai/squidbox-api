@@ -20,14 +20,31 @@ EDITOR="code --wait" bin/rails credentials:edit
 
 ## File Uploads
 
-All uploads go through the API (`PUT /api/v1/asset_files/upload/:file_key`). The request body is streamed directly to S3 — no temp file is written to disk. The API responds only after S3 confirms completion.
+All uploads go through the API (`PUT /api/v1/asset_files/upload/:file_key`). The API responds only after S3 confirms completion.
 
 - **Small files** (< 200MB): single `put_object` to S3
 - **Large files** (≥ 200MB): S3 multipart upload in 100MB chunks
 
-Peak memory usage is ~100MB (one chunk at a time). Disk usage is minimal — Rack/Puma may buffer the request body internally for very large uploads, but no second copy is made.
+Peak memory usage is ~100MB (one chunk at a time).
 
 The Caddy reverse proxy is configured with a 4h timeout to support very large file uploads. No background threads or progress polling are needed.
+
+### Puma buffering
+
+Puma buffers the **entire request body** before handing it to Rails. For a large file upload this means:
+
+1. Client starts sending data — the app shows progress, but Rails logs are silent.
+2. Puma finishes receiving the full body (e.g. 26 minutes for a 5GB file at 4 MB/s).
+3. Only then does `Started PUT ...` appear in the Rails logs.
+4. Rails reads the already-buffered body and streams it to S3.
+
+There is no way to run `before_action :authenticate_request` before the body is received without replacing Puma. Authentication always happens after the full upload has been buffered.
+
+### JWT token TTL
+
+The access token TTL is set to **24 hours** (see `AuthenticationController::TOKEN_EXPIRATION`). This is intentionally long to cover very large uploads: authentication runs only after Puma has buffered the full body, so the token must still be valid at that point — potentially hours after the upload started. A short TTL would cause a 401 after all data has already been transferred, wasting the entire upload.
+
+The client also implements a retry: if a 401 is returned, it refreshes the token and re-uploads the file (see `uploadFileAsync.js`).
 
 ## Deploy to DigitalOcean Droplet
 
